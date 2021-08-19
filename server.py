@@ -1,4 +1,6 @@
 from flask import Flask, make_response
+#Add Regexconverter
+from werkzeug.routing import BaseConverter
 import re
 import os
 import subprocess
@@ -10,6 +12,12 @@ import ctypes
 import sys
 import webbrowser
 from diskcache import Cache
+
+#Regexconverter Class
+class RegexConverter(BaseConverter):
+    def __init__(self,url_map,*items):
+        super(RegexConverter, self).__init__(url_map)
+        self.regex=items[0]
 
 def run_as_admin():
     def is_admin():
@@ -66,6 +74,8 @@ cache = Cache("./cache", size_limit=10*1024*1024*1024, shards=10)
 proxies = config_proxy()
 app = Flask(__name__)
 
+#Claim RegexConverter
+app.url_map.converters['regex'] = RegexConverter
 
 def quad_key_to_tileXY(quadKey):
     tileX = tileY = 0
@@ -82,13 +92,15 @@ def quad_key_to_tileXY(quadKey):
             tileY |= mask
     return tileX, tileY, levelOfDetail
 
-
-@app.route("/tiles/<path>")
+#Only deal with url with '.jpeg'
+@app.route('/tiles/<regex(".*.jpeg.*"):path>')
+#@app.route("/tiles/<path>")
 def tiles(path):
-    if "akh" not in path:
-        content = requests.get(
-            request.url, proxies=proxies, timeout=30).content
-        return content
+    #To be compatible with a(\d+).jpeg url  
+    #if "akh" not in path:
+    #    content = requests.get(
+    #        request.url, proxies=proxies, timeout=30).content
+    #    return content
 
     quadkey = re.findall(r"akh(\d+).jpeg", path)[0]
     tileX, tileY, levelOfDetail = quad_key_to_tileXY(quadkey)
